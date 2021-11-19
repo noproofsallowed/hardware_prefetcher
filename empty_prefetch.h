@@ -15,9 +15,7 @@
 class Prefetcher {
   private:
 	bool _ready;
-	u_int32_t _last_addrs[1000000];
 	Request _nextReq;
-	int _n, _m, _r, _a;
 
   public:
 	Prefetcher();
