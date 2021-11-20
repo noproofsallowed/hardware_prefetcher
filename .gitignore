@@ -1,3 +1,9 @@
+.ipynb_checkpoints/
+
+# uretilenler
+bin/
+logs/
+
 # VSCODE GITIGNORE 
 .vscode/*
 !.vscode/settings.json

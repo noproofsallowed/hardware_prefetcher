@@ -1,2 +1,0 @@
-$(#@)$()@#*($)@(#*$)@#($*@)#($*)@(#*$
-curr_cycle(397468) - lastIssueRequestCycle(395468) >= maxStallAllowed(2000)

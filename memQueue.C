@@ -59,7 +59,7 @@ bool memQueue::add(Request req, u_int32_t cycle) {
 	bool success = true;
 	u_int32_t tag, index;
 
-	if(_size == _capacity) success = false;
+	if(_size == _capacity-1) success = false;
 	else {
 		// first check to see if this is a duplicate
 		index = _source->getIndex(req.addr);
