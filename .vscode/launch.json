@@ -5,11 +5,35 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(lldb) Launch",
+            "name": "(lldb) Cache-Tiny Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher/cacheSim",
+            "program": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher/bin/cacheSim",
             "args": ["traces/tiny.trace"],
+            "stopAtEntry": false,
+            "cwd": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        },
+        {
+            "name": "(lldb) Empty-Tiny Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher/bin/emptySim",
+            "args": ["traces/tiny.trace"],
+            "stopAtEntry": false,
+            "cwd": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        },
+        {
+            "name": "(lldb) Empty-Testgen Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher/bin/emptySim",
+            "args": ["traces/testgen.trace"],
             "stopAtEntry": false,
             "cwd": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher",
             "environment": [],

@@ -1,0 +1,7 @@
+total run time: 673466
+D-cache total hit rate: 0.942776
+L2 cache total hit rate: 0.058045
+AMAT: 3.014667
+Average Memory Queue Size: 0.260421
+L2 BW Utilization: 0.011998
+Memory BW Utilization: 0.244213

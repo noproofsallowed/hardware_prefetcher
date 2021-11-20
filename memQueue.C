@@ -66,7 +66,12 @@ bool memQueue::add(Request req, u_int32_t cycle) {
 		tag = _source->getTag(req.addr);
 
 		int dupLoc = findDup(tag,index); // see if there is a duplicate request (-1 = not found)
+#ifdef DEBUG
+		printf("memQueue: trying to add to the queue\n");
+		printf("memQueue: dupLoc=%d\n", dupLoc);
 
+		printf("_front=%d, _rear=%d, _size=%d\n", _front, _rear, _size);
+#endif
 		if(dupLoc == -1) { // no duplicate found
 			_queue[_rear] = req;
 			_tags[_rear] = tag;
@@ -82,7 +87,9 @@ bool memQueue::add(Request req, u_int32_t cycle) {
 				_readyTime[_rear] = _latency + _readyTime[i];
 			}
 
-			//printf("adding to %c: readyTime is %u\n",_id,_readyTime[_rear]);
+#ifdef DEBUG
+			printf("adding to %c: readyTime is %u\n",_id,_readyTime[_rear]);
+#endif
 
 			_size++; // increase size
 			_rear++; // move rear
@@ -91,6 +98,9 @@ bool memQueue::add(Request req, u_int32_t cycle) {
 		else if(req.fromCPU) { // if our new request is from the CPU, we want to replace the old duplicate
 			_queue[dupLoc] = req;
 		}
+#ifdef DEBUG
+		printf("_front=%d, _rear=%d, _size=%d\n", _front, _rear, _size);
+#endif
 	}
 
 	return success;
@@ -113,6 +123,16 @@ bool memQueue::remove() {
 u_int32_t memQueue::getSize() { return _size; }
 
 bool memQueue::frontReady(u_int32_t cycle) { 
+#ifdef DEBUG
+	int i = _front;
+	while(i != _rear) {
+		Request req = _queue[i];
+		printf("queue[i=%d]: addr=%x, pc=%x, _readyTime[i]=%d\n", i, req.addr, req.pc, _readyTime[i]);
+		i++;
+		if(i == _capacity) i = 0;
+		/* printf("_front=%d, _rear=%d, _size=%d\n", _front, _rear, _size); */
+	}
+#endif
 	if(_size > 0 && _readyTime[_front] <= cycle) return true;
 	else return false;
 }

@@ -3,13 +3,23 @@
         "main.C": "cpp",
         "prefetcher.C": "cpp",
         "test_prefetch.C": "cpp",
-        "empty_prefetch.C": "cpp"
+        "empty_prefetch.C": "cpp",
+        "memQueue.C": "cpp",
+        "CPU.C": "cpp",
+        "empty_prefetcher.C": "cpp"
     },
     "makefile.launchConfigurations": [
         {
             "cwd": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher",
             "binaryPath": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher/cacheSim",
-            "binaryArgs": ["traces/tiny.trace"]
+            "binaryArgs": [
+                "traces/tiny.trace"
+            ]
+        },
+        {
+            "cwd": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher",
+            "binaryPath": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher/cacheSim",
+            "binaryArgs": []
         }
     ]
 }

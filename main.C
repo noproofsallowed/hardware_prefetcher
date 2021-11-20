@@ -10,10 +10,19 @@
 #include "CPU.h"
 #include "mem-sim.h"
 #include "memQueue.h"
+#ifdef cache
 #include "prefetcher.h"
-
+#endif
+#ifdef sample
+#include "sample-pf/prefetcher.h"
+#endif
+#ifdef empty
+#include "empty_prefetcher.h"
+#endif
 #include <stdlib.h>
 #include <string.h>
+
+/* #define DEBUG 1 */
 
 int main(int argc, char* argv[]) {
 	if(argc != 2) {
@@ -76,6 +85,8 @@ int main(int argc, char* argv[]) {
 	u_int32_t memQsize = 0; // used for calculating average queue length
 
 	u_int32_t curr_cycle = 1;
+	u_int32_t lastIssueRequestCycle = 0;
+	u_int32_t maxStallAllowed = 5000;
 	Request req;
 	bool isHit;
 
@@ -86,10 +97,25 @@ int main(int argc, char* argv[]) {
 
 		cpuState cpu_status = cpu.getStatus(curr_cycle);
 
-		//printf("%u %u\n",curr_cycle,cpu_status);
+		int numCompleteRequests = 0;
+#ifdef DEBUG
+		printf("######\n");
+		printf("%u %u\n",curr_cycle,cpu_status);
+#endif
+
+		if(curr_cycle - lastIssueRequestCycle >= maxStallAllowed) {
+			printf("$(#@)$()@#*($)@(#*$)@#($*@)#($*)@(#*$\n");
+			printf("curr_cycle(%d) - lastIssueRequestCycle(%d) >= maxStallAllowed(%d)\n", curr_cycle, lastIssueRequestCycle, maxStallAllowed);
+			return 0;
+		}
 
 		if(cpu_status == READY) { // request is ready
 			req = cpu.issueRequest(curr_cycle);
+			lastIssueRequestCycle = curr_cycle;
+#ifdef DEBUG
+			printf("cpu_status == READY\n");
+			printf("new_request = req.addr=%x, req.pc=%x, req.load=%d, req.fromCPU=%d, req.issuedAt=%d, req.HitL1=%d, req.HitL2=%d\n",req.addr, req.pc, req.load, req.fromCPU, req.issuedAt, req.HitL1, req.HitL2);
+#endif
 			if(!req.fromCPU) printf("houston, this sucks!\n");
 
 			// check for L1 hit
@@ -101,26 +127,59 @@ int main(int argc, char* argv[]) {
 			pf.cpuRequest(req);
 
 			if(isHit) {
+#ifdef DEBUG
+				printf("L1 cache hit!\n");
+				printf("completeRequest is called!\n");
+#endif
 				DCache.access(req.addr,req.load);
 				cpu.completeRequest(curr_cycle);
+				numCompleteRequests++;
 			}
 			else if(req.load) {
+#ifdef DEBUG
+				printf("It is a load request\n");
+#endif
 				nRequestsL2++;
-
-				if(queueL2.add(req,curr_cycle)) { /* printf("adding load req to L2 queue at cycle %u\n",curr_cycle); */ cpu.setStatus(WAITING); } // CPU is now "waiting" for response from L2/mem
-				else cpu.setStatus(STALLED_L2); // no room in l2 queue so we are "stalled" on this request
+				if(queueL2.add(req,curr_cycle)) { 
+#ifdef DEBUG
+					printf("adding load req to L2 queue at cycle %u, setStatus(WAITING)\n",curr_cycle);
+#endif
+					cpu.setStatus(WAITING); 
+				} // CPU is now "waiting" for response from L2/mem
+				else {
+#ifdef DEBUG
+					cpu.setStatus(STALLED_L2); // no room in l2 queue so we are "stalled" on this request
+#endif
+					printf("cannot add request to the queue, setStatus(STALLED_L2)\n");
+				}
 			}
 			else { // store miss
 				nRequestsL2++;
+#ifdef DEBUG
+				printf("It is a write request\n");
+#endif
 
-				if (writeBuffer.add(req,curr_cycle)) { /*printf("adding store to writebuffer on cycle %u\n",curr_cycle); */ cpu.completeRequest(curr_cycle); }
+				if (writeBuffer.add(req,curr_cycle)) { 
+#ifdef DEBUG
+					printf("adding store to writeBuffer on cycle %u\n",curr_cycle); 
+					printf("completeRequest is called!\n");
+#endif
+					numCompleteRequests++;
+					cpu.completeRequest(curr_cycle); 
+				}
 				else { // need to stall for an entry in the write buffer to open up
+#ifdef DEBUG
+					printf("cannot add store to writeBuffer, setStatus(STALLED_WB)\n");
+#endif
 					cpu.setStatus(STALLED_WB);
 				}
 			}
 		}
 		// PF can do some work if we are just waiting or idle OR if we had a hit in the D-cache so the D-to-L2 bus isn't needed
 		else if(cpu_status == WAITING || cpu_status == IDLE || cpu_status == STALLED_WB || isHit) { // either waiting for lower mem levels or idle so PF can do something
+#ifdef DEBUG
+			printf("cpu_status == WAITING || cpu_status == IDLE || cpu_status == STALLED_WB || isHit\n");
+#endif
 			if(pf.hasRequest(curr_cycle)) { 
 				nRequestsL2++;
 
@@ -131,49 +190,123 @@ int main(int argc, char* argv[]) {
 			}
 
 			if(cpu_status == STALLED_WB) { // attempt to put it in the write buffer
+#ifdef DEBUG
+				printf("cpu_status == STALLED_WB\n");
+				printf("cpu.getRequest() = req.addr=%x, req.pc=%x, req.load=%d, req.fromCPU=%d, req.issuedAt=%d, req.HitL1=%d, req.HitL2=%d\n",req.addr, req.pc, req.load, req.fromCPU, req.issuedAt, req.HitL1, req.HitL2);
+#endif
 				req = cpu.getRequest(); // get the request we want
 
-				if (writeBuffer.add(req,curr_cycle)) cpu.completeRequest(curr_cycle); // if added, we can move on
+
+				if (writeBuffer.add(req,curr_cycle)) {
+#ifdef DEBUG
+					printf("added to the writeBuffer!\n");
+					printf("completeRequest is called\n");
+#endif
+					numCompleteRequests++;
+					cpu.completeRequest(curr_cycle); // if added, we can move on
+				}
 			}
 		}
 		else if(cpu_status == STALLED_L2) { // stalled b/c of L2 queue so let us just try this right away
+#ifdef DEBUG
+			printf("cpu_status == STALLED_L2\n");
+			printf("cpu.getRequest() = req.addr=%x, req.pc=%x, req.load=%d, req.fromCPU=%d, req.issuedAt=%d, req.HitL1=%d, req.HitL2=%d\n",req.addr, req.pc, req.load, req.fromCPU, req.issuedAt, req.HitL1, req.HitL2);
+#endif
 			req = cpu.getRequest();
-			if(queueL2.add(req,curr_cycle)) cpu.setStatus(WAITING); // l2 queue is free now so we can go into waiting state
+			if(queueL2.add(req,curr_cycle)) {
+#ifdef DEBUG
+				printf("added to queueL2, setStatus(WAITING)\n");
+#endif
+				cpu.setStatus(WAITING); // l2 queue is free now so we can go into waiting state
+			}
 		}
 
 		// service the L2 queue
+#ifdef DEBUG
+		printf("queueL2.frontReady(curr_cycle) is called:\n");
+#endif
 		if(queueL2.frontReady(curr_cycle)) { // check to see if the front element in the queue is ready
 			req = queueL2.getFront();
-			//printf("servicing the l2 queue on cycle %u (addr: %x)\n",curr_cycle,req.addr);
+#ifdef DEBUG
+			printf("servicing the l2 queue on cycle %u (addr: %x)\n",curr_cycle,req.addr);
+			printf("queueL2.getFront() = req.addr=%x, req.pc=%x, req.load=%d, req.fromCPU=%d, req.issuedAt=%d, req.HitL1=%d, req.HitL2=%d\n",req.addr, req.pc, req.load, req.fromCPU, req.issuedAt, req.HitL1, req.HitL2);
+#endif
 
 			isHit = L2Cache.check(req.addr,req.load);
-			if (req.fromCPU)
+			if (req.fromCPU) {
+#ifdef DEBUG
+				printf("request is from CPU, so cpu.loadHitL2(isHit) is called, right ?\n");
 				cpu.loadHitL2(isHit);
+#endif
+			}
 
 			if(isHit) {
+#ifdef DEBUG
+				printf("L2 cache hit! Updating data and l2 cache\n");
+#endif
 				DCache.access(req.addr,req.load); // update D cache
 				L2Cache.access(req.addr,req.load); // update L2 cache
-				if(req.fromCPU) cpu.completeRequest(curr_cycle); // this request was from the CPU so update state to show we are done
+				if(req.fromCPU) {
+#ifdef DEBUG
+					printf("request is from CPU\n");
+					printf("completeRequest is called!\n");
+#endif
+					numCompleteRequests++;
+					cpu.completeRequest(curr_cycle); // this request was from the CPU so update state to show we are done
+				}
 				queueL2.remove(); // remove this request from the queue
 
 				//if(req.addr == 0xbfeccff8) printf("bad request completed on cycle %u at addr %x!\n",curr_cycle,req.addr);
 			}
 			else {
-				if(queueMem.add(req,curr_cycle)) queueL2.remove(); // succesfully added to memory queue so we can remove it from L2 queue
+#ifdef DEBUG
+				printf("is not hit so sending to queueMem...\n");
+#endif
+				if(queueMem.add(req,curr_cycle)) {
+#ifdef DEBUG
+					printf("succesfully added to queueMem, removed from queueL2!\n");
+#endif
+					queueL2.remove(); // succesfully added to memory queue so we can remove it from L2 queue
+				} else {
+#ifdef DEBUG
+					printf("oh NO! still in queueL2!@@!@!\n");
+#endif
+				}
 			}
 		}
 
+#ifdef DEBUG
+		printf("queueMem.frontReady(curr_cycle) is called:\n");
+#endif
 		// service the memory queue
 		if(queueMem.frontReady(curr_cycle)) {
 			req = queueMem.getFront();
-			//printf("servicing the mem queue on cycle %u (EA: %x)\n",curr_cycle,req.addr);
 			queueMem.remove();
+			
+#ifdef DEBUG
+			printf("servicing the mem queue on cycle %u (EA: %x)\n",curr_cycle,req.addr);
+			printf("queueMem.getFront() = req.addr=%x, req.pc=%x, req.load=%d, req.fromCPU=%d, req.issuedAt=%d, req.HitL1=%d, req.HitL2=%d\n",req.addr, req.pc, req.load, req.fromCPU, req.issuedAt, req.HitL1, req.HitL2);
 
 			// update both L2 and D cache
+			printf("updating l2 cache..\n");
+#endif
 			L2Cache.access(req.addr,req.load);
-			if(req.load) DCache.access(req.addr,req.load); // only update D-cache if this is a load
+			if(req.load) {
+#ifdef DEBUG
+				printf("request is a load\n");
+				printf("updating l1 cache...\n");
+#endif
+				DCache.access(req.addr,req.load); // only update D-cache if this is a load
+			}
 
-			if(req.fromCPU && req.load) cpu.completeRequest(curr_cycle);
+			if(req.fromCPU && req.load) {
+#ifdef DEBUG
+				printf("request is from CPU and is load\n");
+				printf("completeRequest is called!\n");
+#endif
+				numCompleteRequests++;
+				cpu.completeRequest(curr_cycle);
+			}
 		}
 
 		// check to see if we are utilizing memory BW during this cycle
@@ -182,19 +315,42 @@ int main(int argc, char* argv[]) {
 		// used to find the average size of the memory queue
 		memQsize += queueMem.getSize();
 
+#ifdef DEBUG
+		printf("writeBuffer.frontReady(curr_cycle) is called:\n");
+#endif
 		// service the write buffer
 		if(writeBuffer.frontReady(curr_cycle)) {
 			req = writeBuffer.getFront();
+
+#ifdef DEBUG
+			printf("servicing the writeBuffer on cycle %u (EA: %x)\n",curr_cycle,req.addr);
+			printf("writeBuffer.getFront() = req.addr=%x, req.pc=%x, req.load=%d, req.fromCPU=%d, req.issuedAt=%d, req.HitL1=%d, req.HitL2=%d\n",req.addr, req.pc, req.load, req.fromCPU, req.issuedAt, req.HitL1, req.HitL2);
+#endif
 
 			isHit = L2Cache.check(req.addr,req.load);
 			cpu.storeHitL2(isHit);
 
 			if(isHit) { // store hit in L2 so just save it and we are done
+#ifdef DEBUG
+				printf("isHit, accessed in L2 and removed from writeBuffer\n");
+#endif
 				L2Cache.access(req.addr,req.load);
 				writeBuffer.remove();
 			}
 			else { // L2 is write-allocate so we need to load data from memory first
-				if(queueMem.add(req,curr_cycle)) writeBuffer.remove(); 
+#ifdef DEBUG
+				printf("is not a hit\n");
+#endif
+				if(queueMem.add(req,curr_cycle)) {
+#ifdef DEBUG
+					printf("added to queueMem and removed from writeBuffer\n");
+#endif
+					writeBuffer.remove(); 
+				} else {
+#ifdef DEBUG
+					printf("oh NO! still in writeBuffer!@@!@!\n");
+#endif
+				}
 			}
 		}
 

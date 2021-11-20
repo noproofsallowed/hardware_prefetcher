@@ -15,7 +15,7 @@ Prefetcher::Prefetcher() { _ready = false; _n = 0; _m = 0; _a = 0;}
 
 bool Prefetcher::hasRequest(u_int32_t cycle) { 
 	/* printf("hasRequest\n"); */
-	return false;
+	/* return false; */
 	return _ready; 
 }
 
