@@ -20,6 +20,7 @@ Request Prefetcher::getRequest(u_int32_t cycle) { return _nextReq; }
 void Prefetcher::completeRequest(u_int32_t cycle) { _ready = false; }
 
 void Prefetcher::cpuRequest(Request req) { 
+	printf("cpuRequest = req.addr=%x, req.pc=%x, req.load=%d, req.fromCPU=%d, req.issuedAt=%d, req.HitL1=%d, req.HitL2=%d\n",req.addr, req.pc, req.load, req.fromCPU, req.issuedAt, req.HitL1, req.HitL2);
 	if(!_ready && !req.HitL1) {
 		_ready = false;
 	}

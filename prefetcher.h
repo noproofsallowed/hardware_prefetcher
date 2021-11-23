@@ -23,6 +23,7 @@ class Prefetcher {
 	u_int32_t* _last_clock;
 	u_int32_t* _first_clock;
 	bool* _executed;
+	bool* _is_dupe;
 
 	u_int32_t _front;
 	u_int32_t _rear;
@@ -34,6 +35,7 @@ class Prefetcher {
 
 	Request _nextReq;
 
+	bool shouldExecute(int32_t i);
   public:
 	Prefetcher();
 
