@@ -245,7 +245,7 @@ int main(int argc, char* argv[]) {
 				printf("L2 cache hit! Updating data and l2 cache\n");
 #endif
 				DCache.access(req.addr,req.load); // update D cache
-				L2Cache.access(req.addr,req.load); // update L2 cache
+				/* L2Cache.access(req.addr,req.load); // update L2 cache */
 				if(req.fromCPU) {
 #ifdef DEBUG
 					printf("request is from CPU\n");
