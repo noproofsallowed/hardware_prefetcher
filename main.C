@@ -367,7 +367,7 @@ int main(int argc, char* argv[]) {
 	printf("total run time: %u\n",curr_cycle);
 	printf("D-cache total hit rate: %f\n",cpu.getHitRateL1());
 	printf("L2 cache total hit rate: %f\n",cpu.getHitRateL2());
-	printf("AMAT: %f\n",cpu.getAMAT());
+	printf("--AMAT: %f\n",cpu.getAMAT());
 	printf("Average Memory Queue Size: %f\n",avgMemQ);
 	printf("L2 BW Utilization: %f\n",L2BW);
 	printf("Memory BW Utilization: %f\n",memBW);

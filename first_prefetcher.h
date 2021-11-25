@@ -25,12 +25,12 @@ class Prefetcher {
 	bool* _executed;
 	bool* _is_dupe;
 
-	u_int32_t _front;
-	u_int32_t _rear;
-	u_int32_t _size;
+	int32_t _front;
+	int32_t _rear;
+	int32_t _size;
 
-	u_int32_t _capacity;
-	u_int32_t _clock_interval;
+	int32_t _capacity;
+	int32_t _clock_interval;
 	bool _load_only;
 
 	Request _nextReq;

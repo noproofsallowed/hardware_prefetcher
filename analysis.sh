@@ -8,13 +8,13 @@ echo "Compiling all"
 make
 
 for algo in "${algos[@]}"; do
-	echo "#################"
+	echo "#################(${algo})"
 	source run.sh ${algo} ${trace} > /dev/null
-	echo "finished running ${algo}"
+	echo "finished running"
 	log_file="logs/${algo}_${trace}.txt"
 	tail -n 7 $log_file
-	echo "Amount of prefetcher requests: $(grep "hasRequest is planning to " ${log_file} | wc -l)"
-	echo "Amount of misses: $(grep "req.HitL1=0" ${log_file} | wc -l)"
+	echo "--Amount of prefetcher requests: $(grep "hasRequest is planning to " ${log_file} | wc -l)"
+	echo "--Amount of misses: $(grep "req.HitL1=0" ${log_file} | wc -l)"
 done
 echo "#################"
 
