@@ -17,6 +17,21 @@ class Prefetcher {
 	bool _ready;
 	Request _nextReq;
 
+	u_int32_t *_tag;
+	u_int32_t *_addr;
+	int32_t *_stride;
+	int32_t *_state; // This really uses 2 bits only!
+	
+	u_int32_t *_buffer;
+
+	int32_t _front;
+	int32_t _rear;
+	int32_t _size;
+
+	int32_t _capacity;
+	int32_t _num_bits;
+
+	void _add(u_int32_t addr);
   public:
 	Prefetcher();
 
