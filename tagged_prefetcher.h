@@ -17,6 +17,17 @@ class Prefetcher {
 	bool _ready;
 	Request _nextReq;
 
+	u_int32_t* _addr;
+	bool *_executed;
+	// bool *_tag;
+
+	int32_t _front;
+	int32_t _rear;
+	int32_t _size;
+
+	int32_t _capacity;
+
+	void add(u_int32_t addr);
   public:
 	Prefetcher();
 
