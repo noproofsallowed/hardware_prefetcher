@@ -1,6 +1,6 @@
 # traces = [tiny, testgen, ls]
 # algos=("cache" "sample" "empty")
-algos=("sample" "empty")
+algos=("cache" "sample" "empty")
 trace=$1
 # algo="sample"
 

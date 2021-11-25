@@ -15,8 +15,27 @@
 class Prefetcher {
   private:
 	bool _ready;
+	u_int32_t _last_ready_clock;
+
+	u_int32_t* _addrs;
+	int32_t* _strides;
+	u_int32_t* _lens;
+	u_int32_t* _last_clock;
+	u_int32_t* _first_clock;
+	bool* _executed;
+	bool* _is_dupe;
+
+	u_int32_t _front;
+	u_int32_t _rear;
+	u_int32_t _size;
+
+	u_int32_t _capacity;
+	u_int32_t _clock_interval;
+	bool _load_only;
+
 	Request _nextReq;
 
+	bool shouldExecute(int32_t i);
   public:
 	Prefetcher();
 
