@@ -22,7 +22,7 @@ Prefetcher::Prefetcher() {
 	_stride = (int32_t*)calloc(1<<_num_bits, sizeof(int32_t));
 	_state = (int32_t*)calloc(1<<_num_bits, sizeof(int32_t));
 
-	_capacity = 10;
+	_capacity = 100;
 
 	_front = 0;
 	_rear = 0;
@@ -120,7 +120,7 @@ void Prefetcher::cpuRequest(Request req) {
 			}
 		} 
 
-		if((_state[ind] == 2 || _state[ind] == 1 ) && _stride[ind] != 0) {
+		if(_state[ind] == 1 && _stride[ind] != 0) {
 			_add(_addr[ind]+_stride[ind]);
 			printf("_add is called\n");
 		} else {
