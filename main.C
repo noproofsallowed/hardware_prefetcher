@@ -375,13 +375,13 @@ int main(int argc, char* argv[]) {
 
 
 	// create output file name based on trace file name
-	char* outfile = (char *)malloc(sizeof(char)*(strlen(argv[1])+5));
-	strcpy(outfile,argv[1]);
-	strcat(outfile,".out");
-
-	fp = fopen(outfile,"w"); // open outfile for writing
-
-	free(outfile);
+	/* char* outfile = (char *)malloc(sizeof(char)*(strlen(argv[1])+5)); */
+	/* strcpy(outfile,argv[1]); */
+	/* strcat(outfile,".out"); */
+        /*  */
+	/* fp = fopen(outfile,"w"); // open outfile for writing */
+        /*  */
+	/* free(outfile); */
 /*
 	fprintf(fp,"%u\n",curr_cycle);
 	fprintf(fp,"%.4f\n",cpu.getHitRateL1());
