@@ -14,12 +14,12 @@
 #include <string.h>
 #include <algorithm>
 
-u_int32_t _page(u_int32_t addr) {
-	return (addr>>(_b+_p));
+int32_t _page(int32_t addr) {
+	return (addr&~((1<<(_b+_p))-1));
 }
 
-u_int32_t _offset(u_int32_t addr) {
-	return ((_page(addr)<<_p)^(addr>>_b));
+int32_t _offset(int32_t addr) {
+	return ((addr-_page(addr))&~((1<<_b)-1));
 }
 
 DHB::DHB() {
@@ -30,13 +30,13 @@ DHB::DHB() {
 		_buffer[i].used = 0;
 		_buffer[i].MRU = false;
 		_buffer[i].predicted = false;
-		memset(_buffer[i].delta, 0, _num_delta*sizeof(u_int32_t));
-		memset(_buffer[i].offset, 0, _num_delta*sizeof(u_int32_t));
+		memset(_buffer[i].delta, 0, _num_delta*sizeof(int32_t));
+		memset(_buffer[i].offset, 0, _num_delta*sizeof(int32_t));
 	}
 }
 
-int DHB::has(u_int32_t addr) {
-	u_int32_t page = _page(addr);
+int DHB::has(int32_t addr) {
+	int32_t page = _page(addr);
 	for(int i = 0; i < _dhb_capacity; i++)
 		if(_buffer[i].used > 0 && _buffer[i].page == page)
 			return i;
@@ -62,8 +62,8 @@ void DHB::refresh_MRU() {
 		_buffer[i].MRU = false;
 }
 
-bool DHB::is_hit(int32_t ind, u_int32_t addr) {
-	u_int32_t offset = _offset(addr);
+bool DHB::is_hit(int32_t ind, int32_t addr) {
+	int32_t offset = _offset(addr);
 	for(int i = 0; i < _num_delta; i++) 
 		if(_buffer[i].predicted && _buffer[ind].offset[0] == offset)
 			return true;
@@ -76,7 +76,7 @@ DPT::DPT() {
 		_buffer[i].acc[0] = false;
 		_buffer[i].acc[1] = false;
 		_buffer[i].MRU = false;
-		memset(_buffer[i].delta, 0, _num_delta*sizeof(u_int32_t));
+		memset(_buffer[i].delta, 0, _num_delta*sizeof(int32_t));
 	}
 }
 
@@ -118,8 +118,9 @@ OPT::OPT() {
 	}
 }
 
-OPT::Entry* OPT::get(u_int32_t addr) {
-	return &(_buffer[_offset(addr)]);
+OPT::Entry* OPT::get(int32_t addr) {
+	assert(_offset(addr)>=0 && _offset(addr)<(1<<(_p+_b)));
+	return &(_buffer[_offset(addr)>>_b]);
 }
 
 Prefetcher::Prefetcher() { 
@@ -131,7 +132,7 @@ Prefetcher::Prefetcher() {
 	_size = 0;
 }
 
-bool Prefetcher::hasRequest(u_int32_t cycle) { 
+bool Prefetcher::hasRequest(int32_t cycle) { 
 	if(_size <= 0)
 		return false;
 	int ind = _rear-1;
@@ -144,11 +145,11 @@ bool Prefetcher::hasRequest(u_int32_t cycle) {
 	return true;
 }
 
-Request Prefetcher::getRequest(u_int32_t cycle) { return _nextReq; }
+Request Prefetcher::getRequest(int32_t cycle) { return _nextReq; }
 
-void Prefetcher::completeRequest(u_int32_t cycle) { _ready = false; }
+void Prefetcher::completeRequest(int32_t cycle) { _ready = false; }
 
-void Prefetcher::_add(u_int32_t addr) {
+void Prefetcher::_add(int32_t addr) {
 	if(_size == _capacity - 1) {
 		_front = _front+1;
 		if(_front == _capacity) _front = 0;
@@ -170,11 +171,20 @@ void Prefetcher::cpuRequest(Request req) {
 	if (!req.HitL1) pae = true;
 
 	int dhb_ind = _dhb.has(req.addr);
+	// It might be a PAE in another dhb entry ? 
 	if(dhb_ind != -1 && _dhb.is_hit(dhb_ind, req.addr)) pae = true;
 	if(!pae) return;
 
+	// It might be a PAE in another dhb entry ? 
+	// It might be a PAE in another dhb entry ? 
+	// It might be a PAE in another dhb entry ? 
+	// It might be a PAE in another dhb entry ? 
+	// It might be a PAE in another dhb entry ? 
+	// It might be a PAE in another dhb entry ? 
 	if(dhb_ind != -1) { 
 		dhb_p = _dhb.get(dhb_ind);
+		printf("req.addr=%x, _page=%x, _offset=%x\n", req.addr, _page(req.addr), _offset(req.addr));
+		printf("#BEFORE dhb_p(%d) = page=%x, addr=%x, last_predictor=%d, used=%d, MRU=%d, predicted=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", dhb_ind, dhb_p->page, dhb_p->addr, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->predicted, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]);
 
 		int32_t curr_delta = (int32_t)_offset(req.addr)-(int32_t)(dhb_p->addr);
 		for(int i = _num_delta-1; i > 0 ; i--)
@@ -190,6 +200,9 @@ void Prefetcher::cpuRequest(Request req) {
 	} else {
 		dhb_ind = _dhb.evict();
 		dhb_p = _dhb.get(dhb_ind);
+		printf("req.addr=%x, _page=%x, _offset=%x\n", req.addr, _page(req.addr), _offset(req.addr));
+		printf("#BEFORE dhb_p(%d) = page=%x, addr=%x, last_predictor=%d, used=%d, MRU=%d, predicted=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", dhb_ind, dhb_p->page, dhb_p->addr, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->predicted, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]);
+
 		dhb_p->page = _page(req.addr);
 		dhb_p->addr = _offset(req.addr);
 		dhb_p->used = 1;
@@ -204,8 +217,10 @@ void Prefetcher::cpuRequest(Request req) {
 		if((opt_p->pred) == (dhb_p->delta[0]))
 			opt_p->acc = true;
 		else {
-			if(!opt_p->acc) opt_p->pred = dhb_p->delta[0];
-			opt_p->acc = false;
+			if(!opt_p->acc) {
+				opt_p->pred = dhb_p->delta[0];
+				opt_p->acc = true;
+			} else opt_p->acc = false;
 		}
 	}
 	if(dhb_p->used >= 2) { // TODO: Neden last predictor fieldi gerekmedi huh ? 
@@ -219,6 +234,7 @@ void Prefetcher::cpuRequest(Request req) {
 			DPT::Entry* dpt_p = NULL;
 			if(dpt_ind != -1) {
 				dpt_p = _dpt[i].get(dpt_ind);
+				printf("#BEFORE dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
 				if(dpt_p->pred == actual) {
 					if(!dpt_p->acc[0]) dpt_p->acc[0] = true;
 					else if(!dpt_p->acc[1]) {
@@ -237,21 +253,24 @@ void Prefetcher::cpuRequest(Request req) {
 			} else {
 				dpt_ind = _dpt[i].evict();
 				dpt_p = _dpt[i].get(dpt_ind);
+				printf("#BEFORE dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
 				dpt_p->pred = actual;
 				dpt_p->acc[0] = false;
 				dpt_p->acc[1] = false;
-				for(int j = 0; j < _dpt_depth-1; j++)
+				for(int j = 0; j <= i; j++)
 					dpt_p->delta[j] = prev_delta[j];
 			}
 			dpt_p->MRU = true;
 			_dpt[i].refresh_MRU();
+			printf("#AFTER dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
 		}
 	}
 
-	u_int32_t _pred;
-	if(dhb_p->used == 1 /*&& opt_p->acc*/) {
+	int32_t _pred;
+	if(dhb_p->used == 1 && opt_p->acc) {
 		_ready = true;
 		_pred = opt_p->pred + (int32_t)(dhb_p->addr);
+		printf("OPT is used\n");
 	}
 	if(dhb_p->used > 1) { 
 		int depth = std::min(_dpt_depth-1, dhb_p->used-2);
@@ -262,17 +281,20 @@ void Prefetcher::cpuRequest(Request req) {
 			/* if(dpt_p->acc[1] == false && dpt_p->acc[0] == false) continue; */
 			_ready = true;
 			_pred = (int32_t)(dhb_p->addr) + dpt_p->pred;
+			printf("#USED dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
 			dhb_p->last_predictor = i;
 			break;
 		}
 	}
 
 	if(_ready) {
-		_add((((dhb_p->page)<<_p)|_pred)<<_b);
+		_add(dhb_p->page+_pred);
 		for(int i = _num_delta-1; i > 0; i--)
 			dhb_p->offset[i] = dhb_p->offset[i-1];
 		dhb_p->offset[0] = _pred;
 		dhb_p->predicted = true;
 		_ready = false;
 	}
+
+	printf("#AFTER dhb_p(%d) = page=%x, addr=%x, last_predictor=%d, used=%d, MRU=%d, predicted=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", dhb_ind, dhb_p->page, dhb_p->addr, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->predicted, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]);
 }
