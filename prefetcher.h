@@ -29,7 +29,6 @@ class DHB {
 		int32_t last_predictor;
 		int32_t used;
 		bool MRU;
-		bool predicted;
 
 		int32_t delta[_num_delta];
 		int32_t offset[_num_delta];
@@ -39,7 +38,8 @@ class DHB {
 
 	// Returns -1 on miss, +i on hit, how bout 0 bitch ? 
 	int has(int32_t addr);
-	void add(int32_t page, int32_t offset);
+	void add(int32_t ind, int32_t page, int32_t offset);
+	void set(int32_t ind, int32_t page, int32_t offset);
 	DHB::Entry* get(int32_t ind);
 	void refresh_MRU();
 	bool is_hit(int32_t ind, int32_t addr);
@@ -102,7 +102,10 @@ class Prefetcher {
 
 	int32_t _prefetch[_prefetch_capacity];
 
-	void _add(int32_t addr);
+	void _add(int32_t dhb_ind, int32_t addr);
+	void _update_dpt(int32_t dhb_ind);
+	void _update_opt(int32_t dhb_ind);
+	void _check_prediction(int32_t dhb_ind, bool load);
   public:
 	Prefetcher();
 
