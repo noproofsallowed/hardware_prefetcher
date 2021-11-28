@@ -49,6 +49,29 @@ int32_t DHB::evict() {
 	return ind;
 }
 
+void DHB::add(int32_t ind, int32_t page, int32_t offset) {
+	Entry *dhb_p = _dhb.get(dhb_ind);
+	int32_t curr_delta = offset - dhb_p->offset;
+	for(int i = _num_delta-1; i > 0 ; i--)
+		dhb_p->delta[i] = dhb_p->delta[i-1];
+	dhb_p->delta[0] = curr_delta;
+	dhb_p->addr = offset; //?
+	dhb_p->used++;
+	dhb_p->MRU = true;
+	refresh_MRU();
+}
+
+void DHB::set(int32_t ind, int32_t page, int32_t offset) {
+	Entry *dhb_p = _dhb.get(dhb_ind);
+	dhb_p->page = page;
+	dhb_p->addr = offset;
+	dhb_p->used = 1;
+	dhb_p->MRU = true;
+	dhb_p->last_predictor = -1;
+	dhb_p->predicted = false;
+	refresh_MRU();
+}
+
 DHB::Entry* DHB::get(int32_t ind) {
 	return &(_buffer[ind]);
 }
@@ -63,7 +86,7 @@ void DHB::refresh_MRU() {
 }
 
 bool DHB::is_hit(int32_t ind, int32_t addr) {
-	int32_t offset = _offset(addr);
+	int32_t offset = ((addr-_buffer[ind].page)&~((1<<_b)-1));
 	for(int i = 0; i < _num_delta; i++) 
 		if(_buffer[i].predicted && _buffer[ind].offset[0] == offset)
 			return true;
@@ -163,138 +186,53 @@ void Prefetcher::_add(int32_t addr) {
 	if(_rear == _capacity) _rear = 0;
 }
 
+void _update_dpt(int32_t dhb_ind) {
+	DHB::Entry* dhb_p = _dhb.get(dhb_ind);
+
+}
+
 void Prefetcher::cpuRequest(Request req) { 
 	printf("cpuRequest = req.addr=%x, req.pc=%x, req.load=%d, req.fromCPU=%d, req.issuedAt=%d, req.HitL1=%d, req.HitL2=%d\n",req.addr, req.pc, req.load, req.fromCPU, req.issuedAt, req.HitL1, req.HitL2);
 	// Determine PAE
 	bool pae = false;
 	DHB::Entry* dhb_p = NULL;
-	if (!req.HitL1) pae = true;
 
+	for(int dhb_ind = 0; dhb_ind < _dhb_capacity; _dhb_ind++) {
+		pae = false;
+		if(_dhb.is_hit(dhb_ind, req.addr)) pae = true;
+		if(!pae) continue;
+		// Accurate prediction
+
+		DHB::Entry *dhb_p = _dhb.get(dhb_ind);
+		int32_t page = dhb_p->page;
+		int32_t offset = ((req.addr-page)&~((1<<_b)-1));
+
+		_dhb.add(page, offset);
+		_update_dpt(dhb_ind);
+		_check_prediction(dhb_ind);
+	}
+
+	if (req.HitL1) return;
+	
+	// L1 miss
 	int dhb_ind = _dhb.has(req.addr);
-	// It might be a PAE in another dhb entry ? 
-	if(dhb_ind != -1 && _dhb.is_hit(dhb_ind, req.addr)) pae = true;
-	if(!pae) return;
-
-	// It might be a PAE in another dhb entry ? 
-	// It might be a PAE in another dhb entry ? 
-	// It might be a PAE in another dhb entry ? 
-	// It might be a PAE in another dhb entry ? 
-	// It might be a PAE in another dhb entry ? 
-	// It might be a PAE in another dhb entry ? 
-	if(dhb_ind != -1) { 
-		dhb_p = _dhb.get(dhb_ind);
-		printf("req.addr=%x, _page=%x, _offset=%x\n", req.addr, _page(req.addr), _offset(req.addr));
-		printf("#BEFORE dhb_p(%d) = page=%x, addr=%x, last_predictor=%d, used=%d, MRU=%d, predicted=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", dhb_ind, dhb_p->page, dhb_p->addr, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->predicted, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]);
-
-		int32_t curr_delta = (int32_t)_offset(req.addr)-(int32_t)(dhb_p->addr);
-		for(int i = _num_delta-1; i > 0 ; i--)
-			dhb_p->delta[i] = dhb_p->delta[i-1];
-		dhb_p->delta[0] = curr_delta;
-
-		dhb_p->page = _page(req.addr);
-		dhb_p->addr = _offset(req.addr);
-		dhb_p->used++;
-		dhb_p->MRU = true;
-		_dhb.refresh_MRU();
-
-	} else {
+	if(dhb_ind == -1) {
+		// New dhb entry
 		dhb_ind = _dhb.evict();
-		dhb_p = _dhb.get(dhb_ind);
-		printf("req.addr=%x, _page=%x, _offset=%x\n", req.addr, _page(req.addr), _offset(req.addr));
-		printf("#BEFORE dhb_p(%d) = page=%x, addr=%x, last_predictor=%d, used=%d, MRU=%d, predicted=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", dhb_ind, dhb_p->page, dhb_p->addr, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->predicted, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]);
+		_dhb.set(_page(req.addr), _offset(req.addr));
 
-		dhb_p->page = _page(req.addr);
-		dhb_p->addr = _offset(req.addr);
-		dhb_p->used = 1;
-		dhb_p->MRU = true;
-		dhb_p->last_predictor = -1;
-		dhb_p->predicted = false;
-		_dhb.refresh_MRU();
-	}
-
-	OPT::Entry* opt_p = _opt.get(req.addr);
-	if(dhb_p->used == 2) {
-		if((opt_p->pred) == (dhb_p->delta[0]))
-			opt_p->acc = true;
-		else {
-			if(!opt_p->acc) {
-				opt_p->pred = dhb_p->delta[0];
-				opt_p->acc = true;
-			} else opt_p->acc = false;
+		// Try to predict from OPT
+		OPT::Entry* opt_p = _opt.get(req.addr);
+		if(opt_p->acc) {
+			_pred = opt_p->pred + (int32_t)_offset(req.addr);
+			_add(_pred); 
 		}
-	}
-	if(dhb_p->used >= 2) { // TODO: Neden last predictor fieldi gerekmedi huh ? 
-		int depth = std::min(_dpt_depth-1, dhb_p->used-2);
-		int32_t actual = dhb_p->delta[0], prev_delta[_num_delta];
-		for(int i = 0; i < _dpt_depth-1; i++) {
-			prev_delta[i] = dhb_p->delta[i+1];
-		}
-		for(int i = depth; i >= 0; i--) {
-			int32_t dpt_ind = _dpt[i].has(prev_delta, i+1);
-			DPT::Entry* dpt_p = NULL;
-			if(dpt_ind != -1) {
-				dpt_p = _dpt[i].get(dpt_ind);
-				printf("#BEFORE dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
-				if(dpt_p->pred == actual) {
-					if(!dpt_p->acc[0]) dpt_p->acc[0] = true;
-					else if(!dpt_p->acc[1]) {
-						dpt_p->acc[1] = true;
-						dpt_p->acc[0] = false;
-					}
-				} else {
-					if(dpt_p->acc[0]) dpt_p->acc[0] = false;
-					else if(dpt_p->acc[1]) {
-						dpt_p->acc[1] = false;
-						dpt_p->acc[0] = true;
-					} else {
-						dpt_p->pred = actual;
-					}
-				}
-			} else {
-				dpt_ind = _dpt[i].evict();
-				dpt_p = _dpt[i].get(dpt_ind);
-				printf("#BEFORE dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
-				dpt_p->pred = actual;
-				dpt_p->acc[0] = false;
-				dpt_p->acc[1] = false;
-				for(int j = 0; j <= i; j++)
-					dpt_p->delta[j] = prev_delta[j];
-			}
-			dpt_p->MRU = true;
-			_dpt[i].refresh_MRU();
-			printf("#AFTER dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
-		}
-	}
-
-	int32_t _pred;
-	if(dhb_p->used == 1 && opt_p->acc) {
-		_ready = true;
-		_pred = opt_p->pred + (int32_t)(dhb_p->addr);
-		printf("OPT is used\n");
-	}
-	if(dhb_p->used > 1) { 
-		int depth = std::min(_dpt_depth-1, dhb_p->used-2);
-		for(int i = depth; i >= 0; i--) {
-			int32_t dpt_ind = _dpt[i].has(dhb_p->delta, i+1);
-			if(dpt_ind == -1) continue;
-			DPT::Entry* dpt_p = _dpt[i].get(dpt_ind);
-			/* if(dpt_p->acc[1] == false && dpt_p->acc[0] == false) continue; */
-			_ready = true;
-			_pred = (int32_t)(dhb_p->addr) + dpt_p->pred;
-			printf("#USED dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
-			dhb_p->last_predictor = i;
-			break;
-		}
-	}
-
-	if(_ready) {
-		_add(dhb_p->page+_pred);
-		for(int i = _num_delta-1; i > 0; i--)
-			dhb_p->offset[i] = dhb_p->offset[i-1];
-		dhb_p->offset[0] = _pred;
-		dhb_p->predicted = true;
-		_ready = false;
-	}
-
-	printf("#AFTER dhb_p(%d) = page=%x, addr=%x, last_predictor=%d, used=%d, MRU=%d, predicted=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", dhb_ind, dhb_p->page, dhb_p->addr, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->predicted, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]);
+		return;
+	} 
+	if(_dhb.is_hit(dhb_ind, req.addr)) return;
+	
+	DHB::Entry *dhb_p = _dhb.get(dhb_ind);
+	_dhb.add(_page(req.addr), _offset(req.addr));
+	_update_dpt(dhb_ind);
+	_check_prediction(dhb_ind);
 }

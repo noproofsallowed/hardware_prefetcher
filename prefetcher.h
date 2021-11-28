@@ -39,6 +39,7 @@ class DHB {
 
 	// Returns -1 on miss, +i on hit, how bout 0 bitch ? 
 	int has(int32_t addr);
+	void add(int32_t page, int32_t offset);
 	DHB::Entry* get(int32_t ind);
 	void refresh_MRU();
 	bool is_hit(int32_t ind, int32_t addr);
