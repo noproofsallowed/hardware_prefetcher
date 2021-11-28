@@ -216,7 +216,7 @@ void Prefetcher::_update_dpt(int32_t dhb_ind) {
 		DPT::Entry* dpt_p = NULL;
 		if(dpt_ind != -1) {
 			dpt_p = _dpt[i].get(dpt_ind);
-			printf("#BEFORE dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[3]);
+			/* printf("#BEFORE dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[3]); */
 			if(dpt_p->pred == actual) {
 				if(!dpt_p->acc[0]) dpt_p->acc[0] = true;
 				else if(!dpt_p->acc[1]) {
@@ -235,7 +235,7 @@ void Prefetcher::_update_dpt(int32_t dhb_ind) {
 		} else {
 			dpt_ind = _dpt[i].evict();
 			dpt_p = _dpt[i].get(dpt_ind);
-			printf("#BEFORE dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
+			/* printf("#BEFORE dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]); */
 			dpt_p->pred = actual;
 			dpt_p->acc[0] = false;
 			dpt_p->acc[1] = false;
@@ -244,7 +244,7 @@ void Prefetcher::_update_dpt(int32_t dhb_ind) {
 		}
 		dpt_p->MRU = true;
 		_dpt[i].refresh_MRU();
-		printf("#AFTER dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
+		/* printf("#AFTER dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]); */
 	}
 }
 
@@ -324,7 +324,7 @@ void Prefetcher::_check_prediction(int32_t dhb_ind, bool load, bool success) {
 			/* 	printf("load=%d\n", load); */
 			/* 	#<{(| if(load) break; |)}># */
 			/* } */
-			int32_t _pred = (int32_t)(dhb_p->page) + (int32_t)(dhb_p->addr) + dpt_p->pred;
+			int32_t _pred = (int32_t)(dhb_p->page) + (int32_t)(dhb_p->offset[dhb_p->num_preds-1]) + dpt_p->pred;
 			printf("_pred=%x\n",_pred);
 			_add(dhb_ind, _pred, false);
 			assert(dhb_ind>=0 && dhb_ind<_dhb_capacity);
@@ -333,7 +333,7 @@ void Prefetcher::_check_prediction(int32_t dhb_ind, bool load, bool success) {
 				dhb_p->offset[i] = dhb_p->offset[i+1];
 			dhb_p->offset[dhb_p->num_preds-1] = _pred-(dhb_p->page);
 
-			printf("#USED dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[3]);
+			/* printf("#USED dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[3]); */
 			dhb_p->last_predictor = i;
 			/* printf("for bitti\n"); */
 			break;
