@@ -14,10 +14,10 @@
 
 const int _b = 4;
 const int _p = 7;
-const int _num_delta = 7;
+const int _num_delta = 5;
 const int _dhb_capacity = 32;
 const int _dpt_capacity = (1<<_p);
-const int _dpt_depth = 6;
+const int _dpt_depth = 3;
 const int _degree = 5;
 const int _opt_capacity = (1<<_p);
 const int _prefetch_capacity = 20;
@@ -79,6 +79,7 @@ class OPT {
 	struct Entry {
 		int32_t pred;
 		bool acc;
+		bool used;
 	};
 
 	OPT();

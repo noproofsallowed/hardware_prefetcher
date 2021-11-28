@@ -154,6 +154,7 @@ OPT::OPT() {
 	for(int i = 0; i < _opt_capacity; i++) {
 		_buffer[i].pred = 0;
 		_buffer[i].acc = false;
+		_buffer[i].used = false;
 	}
 }
 
@@ -275,7 +276,12 @@ void Prefetcher::_update_opt(int32_t dhb_ind) {
 		return;
 	}
 	printf("#OPTUSED MISS, ISTAKEN=%d!\n", opt_p->acc);
-	if(!opt_p->acc) opt_p->pred = dhb_p->delta[0];
+	if(!opt_p->acc) {
+		opt_p->acc = false;
+		opt_p->pred = dhb_p->delta[0];
+		opt_p->used = true;
+		return;
+	} 
 	opt_p->acc = false;
 }
 
@@ -403,15 +409,16 @@ void Prefetcher::cpuRequest(Request req) {
 
 		// Try to predict from OPT
 		OPT::Entry* opt_p = _opt.get(_offset(req.addr)>>_b);
-		/* if(opt_p->acc) { */
-			int32_t _pred = opt_p->pred + req.addr;
-			printf("#OPTUSED _offset(req.addr)=%x, opt_p->pred=%d, _pred=%x\n", _offset(req.addr), opt_p->pred, _pred);
+		int32_t _pred = opt_p->pred + _offset(req.addr) + _page(req.addr);
+		printf("#OPTCANDIDATE _offset(req.addr)=%x, opt_p->pred=%d, opt_p->acc=%d, _pred=%x\n", _offset(req.addr), opt_p->pred, opt_p->acc, _pred);
+		if(opt_p->used) {
+			printf("#OPTUSED");
 			_add(dhb_ind, _pred, true); 
-		/* } */
+		}
 		return;
 	} 
 	if(success) return;
-	printf("I AM UNSUCCESFULL\n");
+	printf("I AM UNSUCCESFULL OR I HAVENT PREDICTED\n");
 	
 	dhb_p = _dhb.get(dhb_ind);
 	_dhb.add(dhb_ind, _page(req.addr), _offset(req.addr));
