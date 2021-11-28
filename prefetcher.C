@@ -245,17 +245,16 @@ void Prefetcher::_update_dpt(int32_t dhb_ind) {
 void Prefetcher::_update_opt(int32_t dhb_ind) {
 	DHB::Entry* dhb_p = _dhb.get(dhb_ind);
 	/* return &(_buffer[_offset(addr)>>_b]); */
-	OPT::Entry* opt_p = _opt.get((dhb_p->addr)>>_b);
 	if(dhb_p->used != 2) return;
+	int32_t offset = dhb_p->addr - dhb_p->delta[0];
+	OPT::Entry* opt_p = _opt.get(offset>>_b);
 	if((opt_p->pred) == (dhb_p->delta[0])) {
+		printf("#OPTUSED HIT, ISTAKEN=%d!\n", opt_p->acc);
 		opt_p->acc = true;
 		return;
 	}
-	if(!opt_p->acc) {
-		opt_p->pred = dhb_p->delta[0];
-		opt_p->acc = true;
-		return;
-	} 
+	printf("#OPTUSED MISS, ISTAKEN=%d!\n", opt_p->acc);
+	if(!opt_p->acc) opt_p->pred = dhb_p->delta[0];
 	opt_p->acc = false;
 }
 
@@ -268,11 +267,11 @@ void Prefetcher::_check_prediction(int32_t dhb_ind, bool load) {
 		if(dpt_ind == -1) continue;
 		DPT::Entry* dpt_p = _dpt[i].get(dpt_ind);
 		/* if(dpt_p->acc[1] == false && dpt_p->acc[0] == false) continue; */
-		if(dpt_p->pred == 0) {
-			printf("#ZEROPRED IS MADE\n");
-			printf("load=%d\n", load);
-			if(load) continue;
-		}
+		/* if(dpt_p->pred == 0) { */
+		/* 	printf("#ZEROPRED IS MADE\n"); */
+		/* 	printf("load=%d\n", load); */
+		/* 	#<{(| if(load) break; |)}># */
+		/* } */
 		int32_t _pred = (int32_t)dhb_p->page + (int32_t)(dhb_p->addr) + dpt_p->pred;
 		_add(dhb_ind, _pred);
 		printf("#USED dpt_p(%d/%d): pred=%d, acc[0]=%d, acc[1]=%d, MRU=%d, delta={%d, %d, %d, %d}\n", i, dpt_ind, dpt_p->pred, dpt_p->acc[0], dpt_p->acc[1], dpt_p->MRU, dpt_p->delta[0], dpt_p->delta[1], dpt_p->delta[2], dpt_p->delta[2]);
@@ -315,10 +314,11 @@ void Prefetcher::cpuRequest(Request req) {
 
 		// Try to predict from OPT
 		OPT::Entry* opt_p = _opt.get(_offset(req.addr)>>_b);
-		if(opt_p->acc) {
+		/* if(opt_p->acc) { */
 			int32_t _pred = opt_p->pred + req.addr;
+			printf("#OPTUSED _offset(req.addr)=%x, opt_p->pred=%d, _pred=%x\n", _offset(req.addr), opt_p->pred, _pred);
 			_add(dhb_ind, _pred); 
-		}
+		/* } */
 		return;
 	} 
 	if(_dhb.is_hit(dhb_ind, req.addr)) return;
