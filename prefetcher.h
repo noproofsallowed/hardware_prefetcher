@@ -14,10 +14,11 @@
 
 const int _b = 4;
 const int _p = 7;
-const int _num_delta = 6;
-const int _dhb_capacity = 64;
+const int _num_delta = 4;
+const int _dhb_capacity = 16;
 const int _dpt_capacity = (1<<_p);
-const int _dpt_depth = 5;
+const int _dpt_depth = 3;
+const int _degree = 3;
 const int _opt_capacity = (1<<_p);
 const int _prefetch_capacity = 10;
 

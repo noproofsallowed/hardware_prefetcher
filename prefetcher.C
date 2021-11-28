@@ -52,7 +52,7 @@ int32_t DHB::evict() {
 void DHB::add(int32_t ind, int32_t page, int32_t offset) {
 	Entry *dhb_p = get(ind);
 
-	printf("#BEFORE dhb_p(%d) = page=%x, addr=%x, (num_preds=%d), last_predictor=%d, used=%d, MRU=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", ind, dhb_p->page, dhb_p->addr, dhb_p->num_preds, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]);
+	/* printf("#BEFORE dhb_p(%d) = page=%x, addr=%x, (num_preds=%d), last_predictor=%d, used=%d, MRU=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", ind, dhb_p->page, dhb_p->addr, dhb_p->num_preds, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]); */
 
 	int32_t curr_delta = offset - dhb_p->addr;
 	for(int i = _num_delta-1; i > 0 ; i--)
@@ -63,7 +63,7 @@ void DHB::add(int32_t ind, int32_t page, int32_t offset) {
 	dhb_p->MRU = true;
 	refresh_MRU();
 
-	printf("#AFTER dhb_p(%d) = page=%x, addr=%x, (num_preds=%d), last_predictor=%d, used=%d, MRU=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", ind, dhb_p->page, dhb_p->addr, dhb_p->num_preds, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]);
+	/* printf("#AFTER dhb_p(%d) = page=%x, addr=%x, (num_preds=%d), last_predictor=%d, used=%d, MRU=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", ind, dhb_p->page, dhb_p->addr, dhb_p->num_preds, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]); */
 }
 
 void DHB::set(int32_t ind, int32_t page, int32_t offset) {
@@ -75,7 +75,7 @@ void DHB::set(int32_t ind, int32_t page, int32_t offset) {
 	dhb_p->num_preds = 0;
 	dhb_p->last_predictor = -1;
 	refresh_MRU();
-	printf("#AFTER dhb_p(%d) = page=%x, addr=%x, (num_preds=%d), last_predictor=%d, used=%d, MRU=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", ind, dhb_p->page, dhb_p->addr, dhb_p->num_preds, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]);
+	/* printf("#AFTER dhb_p(%d) = page=%x, addr=%x, (num_preds=%d), last_predictor=%d, used=%d, MRU=%d, delta=[%d, %d, %d, %d, %d], offset=[%x, %x, %x, %x, %x]\n", ind, dhb_p->page, dhb_p->addr, dhb_p->num_preds, dhb_p->last_predictor, dhb_p->used, dhb_p->MRU, dhb_p->delta[0], dhb_p->delta[1], dhb_p->delta[2], dhb_p->delta[3], dhb_p->delta[4], dhb_p->offset[0], dhb_p->offset[1], dhb_p->offset[2], dhb_p->offset[3], dhb_p->offset[4]); */
 }
 
 DHB::Entry* DHB::get(int32_t ind) {
@@ -274,12 +274,11 @@ void Prefetcher::_check_prediction(int32_t dhb_ind, bool load, bool success) {
 			memcpy(delta, dhb_p->delta, sizeof(delta));
 			int32_t dpt_ind = _dpt[i].has(delta, i+1);
 			if(dpt_ind == -1) continue;
-			const int32_t degree = 4;
-			int32_t inds[degree];
-			int32_t preds[degree];
+			int32_t inds[_degree];
+			int32_t preds[_degree];
 			int32_t num_preds = 0;
 			int32_t _pred = (int32_t)(dhb_p->page) + (int32_t)(dhb_p->addr);
-			for(int j = 0; j < degree; j++ ) {
+			for(int j = 0; j < _degree; j++ ) {
 				DPT::Entry* dpt_p = _dpt[i].get(dpt_ind);
 				/* if(dpt_p->acc[1] == false && dpt_p->acc[0] == false) continue; */
 				/* if(dpt_p->pred == 0) { */
