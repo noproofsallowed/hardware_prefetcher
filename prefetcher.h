@@ -28,6 +28,7 @@ class DHB {
 		int32_t addr;
 		int32_t last_predictor;
 		int32_t used;
+		int32_t num_preds;
 		bool MRU;
 
 		int32_t delta[_num_delta];
@@ -56,7 +57,7 @@ class DPT {
 		bool acc[2];
 		bool MRU;
 
-		int32_t delta[_num_delta-1];
+		int32_t delta[_num_delta];
 	};
 
 	DPT();
@@ -102,10 +103,10 @@ class Prefetcher {
 
 	int32_t _prefetch[_prefetch_capacity];
 
-	void _add(int32_t dhb_ind, int32_t addr);
+	void _add(int32_t dhb_ind, int32_t addr, bool should_add);
 	void _update_dpt(int32_t dhb_ind);
 	void _update_opt(int32_t dhb_ind);
-	void _check_prediction(int32_t dhb_ind, bool load);
+	void _check_prediction(int32_t dhb_ind, bool load, bool success);
   public:
 	Prefetcher();
 

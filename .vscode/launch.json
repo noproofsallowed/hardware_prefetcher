@@ -5,6 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "(lldb) Cache-G++ Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher/bin/cacheSim",
+            "args": ["traces/g++.trace"],
+            "stopAtEntry": false,
+            "cwd": "/Users/huzur/Documents/ucr/cs203/CS203-fa21-prefetcher",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        }, 
+        {
             "name": "(lldb) Cache-Tiny Launch",
             "type": "cppdbg",
             "request": "launch",
